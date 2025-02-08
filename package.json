@@ -14,7 +14,9 @@
     "tailwindcss": "^4.0.4"
   },
   "devDependencies": {
-    "electron-builder": "^25.1.8"
+    "electron": "^34.1.1",
+    "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2"
   },
   "license": "ISC",
   "build": {
@@ -24,10 +26,14 @@
       "output": "dist"
     },
     "files": [
-      "**/*",
-      "dist/styles.css",
       "src/**/*",
-      "index.html"
+      "dist/styles.css",
+      "index.html",
+      "package.json",
+      "tailwind.config.js",
+      "postcss.config.js",
+      "package-lock.json",
+      "node_modules/**/*"
     ],
     "win": {
       "target": "nsis"
