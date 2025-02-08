@@ -34,4 +34,4 @@ The installer can then be found in the [`dist`](dist/) directory.
 
 ## Demo
 
-![App Screenshot](https://raw.githubusercontent.com/leolion3/electron-screen-recorder/main/media/demo.jpg)
+[![App Screenshot](https://raw.githubusercontent.com/leolion3/electron-screen-recorder/main/media/demo.jpg)](https://github.com/leolion3/electron-screen-recorder/raw/refs/heads/main/media/demo.jpg)
