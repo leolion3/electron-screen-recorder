@@ -1,5 +1,9 @@
 # Electron JS Screen Recorder
 
+<a href="https://github.com/leolion3/electron-screen-recorder/releases" target="_blank" rel="no-referer">
+  <img alt="GitHub (Pre-)Release Date" src="https://img.shields.io/github/release-date-pre/leolion3/electron-screen-recorder?style=for-the-badge">
+</a>
+
 This module contains a simple screen recorder created with ElectronJS.
 
 Inspired by [Fireship's Video](https://www.youtube.com/watch?v=3yqDxhR2XxE).
