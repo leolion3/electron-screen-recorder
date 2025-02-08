@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Recorder</title>
+  <!-- Tailwind CSS -->
+  <link href="dist/styles.css" rel="stylesheet">
+  <style>
+    body { background: transparent; }
+  </style>
+</head>
+<body class="flex items-center justify-center h-screen bg-transparent text-white">
+  <div class="bg-gray-900 bg-opacity-90 p-6 rounded-lg shadow-lg w-96 border border-gray-700">
+    <h2 class="text-lg font-bold text-center mb-4 cursor-move select-none" style="-webkit-app-region: drag;">
+      🎥 Screen Recorder
+    </h2>
+    <label class="block mb-2 text-sm">Select Source:</label>
+    <select id="videoSource" class="w-full mb-4 p-2 bg-gray-800 border border-gray-600 rounded">
+      <option value="">Select a screen</option>
+    </select>
+    <label class="block mb-2 text-sm">Select Microphone:</label>
+    <select id="micSource" class="w-full mb-4 p-2 bg-gray-800 border border-gray-600 rounded">
+      <option value="">Select a microphone</option>
+    </select>
+    <!-- Toggle for System Sound -->
+    <div class="flex items-center mb-4">
+      <label for="soundToggle" class="text-sm mr-2">Enable System Sound</label>
+      <input type="checkbox" id="soundToggle" class="w-5 h-5 text-blue-500">
+    </div>
+    <!-- Toggle for Microphone -->
+    <div class="flex items-center mb-4">
+      <label for="micToggle" class="text-sm mr-2">Enable Microphone</label>
+      <input type="checkbox" id="micToggle" class="w-5 h-5 text-blue-500">
+    </div>
+    <video id="preview" class="w-full rounded-lg border border-gray-600 mb-4" autoplay muted></video>
+    <p id="timer" class="text-center text-sm mt-2">00:00</p>
+    <button id="startStopBtn" class="w-full py-2 bg-green-500 text-white rounded mb-2">Start Recording</button>
+    <button id="quitBtn" class="w-full py-2 bg-red-500 text-white rounded">Quit</button>
+  </div>
+  <script defer src="renderer.js"></script>
+</body>
+</html>
