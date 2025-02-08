@@ -8,9 +8,6 @@
   <img aria-label="Hippocratic License HL3-FULL" src="https://img.shields.io/static/v1?label=Hippocratic%20License&amp;message=HL3-FULL&amp;labelColor=5e2751&amp;color=bc8c3d&amp;style=for-the-badge">
 </a>
 
-<br/>
-<br/>
-
 This module contains a simple screen recorder created with ElectronJS.
 
 Inspired by [Fireship's Video](https://www.youtube.com/watch?v=3yqDxhR2XxE).
