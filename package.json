@@ -2,19 +2,35 @@
   "name": "electron-screen-recorder",
   "version": "1.0.0",
   "description": "A simple Electron app with TailwindCSS for screen recording",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "tailwindcss build src/styles.css -o dist/styles.css"
+    "build": "electron-builder",
+    "tailwind": "tailwindcss build src/styles.css -o dist/styles.css"
   },
   "dependencies": {
-    "electron": "^34.1.1",
-    "tailwindcss": "^4.0.4",
+    "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
-    "autoprefixer": "^10.4.20"
+    "tailwindcss": "^4.0.4"
   },
   "devDependencies": {
-    "concurrently": "^7.0.0"
+    "electron-builder": "^25.1.8"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "build": {
+    "appId": "com.electron.screenrecorder",
+    "productName": "Electron Screen Recorder",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "dist/styles.css",
+      "src/**/*",
+      "index.html"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
 }

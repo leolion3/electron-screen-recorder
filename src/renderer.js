@@ -1,22 +1,28 @@
 const { ipcRenderer } = require('electron');
-const { writeFile } = require('fs');  // not used directly in renderer now
+const { writeFile } = require('fs');
+
 const startStopBtn = document.getElementById('startStopBtn');
 const quitBtn = document.getElementById('quitBtn');
 const videoSourceSelect = document.getElementById('videoSource');
 const micSourceSelect = document.getElementById('micSource');
 const preview = document.getElementById('preview');
 const timerDisplay = document.getElementById('timer');
-const soundToggle = document.getElementById('soundToggle'); // checkbox for system sound
-const micToggle = document.getElementById('micToggle');     // checkbox for microphone
+const soundToggle = document.getElementById('soundToggle');
+const micToggle = document.getElementById('micToggle');
 
 let mediaRecorder;
 let videoStream;
+let audioStream;
 let recordedChunks = [];
 let isRecording = false;
+let enableAudio = false;
+let selectedSourceId = '';
 let timerInterval;
 let seconds = 0;
 
-// Fetch available video sources (screens, windows) and populate the dropdown.
+/** 
+ * Get available video sources.
+ */
 async function getSources() {
   console.log("Fetching video sources...");
   const sources = await ipcRenderer.invoke('get-sources');
@@ -26,10 +32,12 @@ async function getSources() {
     videoOption.textContent = source.name;
     videoSourceSelect.appendChild(videoOption);
   });
-  console.log("Video sources fetched:", sources);
 }
 
-// Populate available microphone devices.
+
+/**
+ * Get available microphones.
+ */
 async function populateMicrophones() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -47,89 +55,63 @@ async function populateMicrophones() {
   }
 }
 
-// Preview the selected video source.
+/**
+ * Preview the selected source.
+ */
 async function previewSelectedSource(sourceId) {
-  console.log("Previewing source:", sourceId);
-  // Stop any existing video stream.
-  if (videoStream) {
-    videoStream.getTracks().forEach(track => track.stop());
-  }
-  const sources = await ipcRenderer.invoke('get-sources');
-  const selectedSource = sources.find(s => s.id === sourceId);
-  if (!selectedSource) {
-    console.error("No source found for id", sourceId);
-    return;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: selectedSource.id,
+    const sources = await ipcRenderer.invoke('get-sources');
+    const selectedSource = sources.find(s => s.id === sourceId);
+    if (!selectedSource) {
+        console.error("No source found for id", sourceId);
+        return;
+    }
+    selectedSourceId = selectedSource.id;
+
+    const constraints = {
+        video: {
+            mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: selectedSource.id,
+            }
+        },
+        audio: !soundToggle.checked ? false : {
+            mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: selectedSource.id,
+                echoCancellation: false
+            }
         }
-      },
-      audio: false
-    });
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     preview.srcObject = stream;
     videoStream = stream;
-    console.log("Video preview started.");
-  } catch (e) {
-    console.error("Error capturing video stream:", e);
-  }
 }
 
-// Toggle recording on/off.
-function toggleRecording() {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
-}
-
-// Start recording.
+/**
+ * Start recording the selected source.
+ */
 async function startRecording() {
-  console.log("Starting recording...");
   if (!videoStream) {
     console.error("No video stream available.");
     return;
   }
+  enableAudio = soundToggle.checked;
+  stopTracks();
+  await previewSelectedSource(selectedSourceId);
 
-  // Prepare an array to collect audio tracks.
   let audioTracks = [];
-
-  // If the system sound toggle is checked, try to capture desktop audio.
+  
   if (soundToggle.checked) {
-    console.log("System sound enabled.");
-    const sources = await ipcRenderer.invoke('get-sources');
-    const selectedSource = sources.find(s => s.id === videoSourceSelect.value);
-    if (selectedSource) {
-      try {
-        const systemAudioStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: selectedSource.id,
-            }
-          },
-          video: false
-        });
-        systemAudioStream.getAudioTracks().forEach(track => audioTracks.push(track));
-        console.log("System audio captured.");
-      } catch (e) {
-        console.error("Error capturing system audio:", e);
-      }
-    }
+    videoStream.getAudioTracks().forEach(track => audioTracks.push(track));
   }
-
-  // If the microphone toggle is checked, capture microphone audio.
   if (micToggle.checked) {
-    console.log("Microphone enabled.");
     const micId = micSourceSelect.value;
     try {
       const micAudioStream = await navigator.mediaDevices.getUserMedia({
         audio: micId ? { deviceId: { exact: micId } } : true,
-        video: false
+        video: false,
+        echoCancellation: true
       });
       micAudioStream.getAudioTracks().forEach(track => audioTracks.push(track));
       console.log("Microphone audio captured.");
@@ -138,12 +120,26 @@ async function startRecording() {
     }
   }
 
-  // Combine the video track(s) and all audio tracks.
-  let combinedTracks = [];
+  const combinedTracks = [];
   if (videoStream) {
-    combinedTracks = combinedTracks.concat(videoStream.getVideoTracks());
+    combinedTracks.push(...videoStream.getVideoTracks());
   }
-  combinedTracks = combinedTracks.concat(audioTracks);
+
+  if (audioTracks && audioTracks.length > 0) {
+    const audioContext = new AudioContext();
+    const destination = audioContext.createMediaStreamDestination();
+    if (audioTracks.length > 0 && audioTracks[0]) {
+      const systemAudioSource = audioContext.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+      systemAudioSource.connect(destination);
+    }
+    if (audioTracks.length > 1 && audioTracks[1]) {
+      const micAudioSource = audioContext.createMediaStreamSource(new MediaStream([audioTracks[1]]));
+      micAudioSource.connect(destination);
+    }
+    audioStream = destination.stream;
+    combinedTracks.push(...audioStream.getAudioTracks());
+  }
+
   const combinedStream = new MediaStream(combinedTracks);
 
   try {
@@ -160,17 +156,6 @@ async function startRecording() {
     }
   };
 
-  mediaRecorder.onstop = async () => {
-    console.log("Recording stopped. Processing data...");
-    const blob = new Blob(recordedChunks, { type: 'video/webm; codecs=vp9' });
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    const { filePath } = await ipcRenderer.invoke('save-dialog', buffer);
-    if (filePath) {
-      console.log('Video saved to:', filePath);
-    }
-    recordedChunks = [];
-  };
-
   mediaRecorder.start();
   isRecording = true;
   startStopBtn.textContent = 'Stop Recording';
@@ -179,19 +164,42 @@ async function startRecording() {
   startTimer();
 }
 
-// Stop recording.
-function stopRecording() {
+function stopTracks() {
+  try {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
+    if (audioStream) {
+      audioStream.getTracks().forEach(track => track.stop());
+    }
+  }
+  catch (e) {
+    console.log('Error stopping tracks', e)
+  }
+}
+
+async function saveRecording() {
+  if (recordedChunks.length == 0) return;
+  try {
+    const blob = new Blob(recordedChunks, { type: 'video/webm; codecs=vp9' });
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    await ipcRenderer.invoke('save-dialog', buffer);
+    recordedChunks = [];
+  } catch (e) {
+    console.log('Error saving recording', e)
+  }
+}
+
+async function stopRecording() {
   console.log("Stopping recording...");
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    const stopPromise = new Promise(resolve => {
+      mediaRecorder.onstop = resolve;
+    });
     mediaRecorder.stop();
+    await stopPromise;
   }
-  if (videoStream) {
-    videoStream.getTracks().forEach(track => track.stop());
-  }
-  if (audioStream) {
-    audioStream.getTracks().forEach(track => track.stop());
-  }
-  // (Audio tracks from getUserMedia used in recording will be stopped when recorder stops.)
+  stopTracks();
   isRecording = false;
   startStopBtn.textContent = 'Start Recording';
   startStopBtn.classList.remove('bg-red-500');
@@ -199,9 +207,10 @@ function stopRecording() {
   clearInterval(timerInterval);
   seconds = 0;
   timerDisplay.textContent = '00:00';
+  await saveRecording();
+  await previewSelectedSource(selectedSourceId);
 }
 
-// Timer function.
 function startTimer() {
   timerInterval = setInterval(() => {
     seconds++;
@@ -211,13 +220,11 @@ function startTimer() {
   }, 1000);
 }
 
-// Quit the app.
 quitBtn.addEventListener('click', () => {
   ipcRenderer.send('quit-recording');
   window.close();
 });
 
-// When the video source selection changes, update the preview.
 videoSourceSelect.addEventListener('change', (e) => {
   const sourceId = e.target.value;
   if (sourceId) {
@@ -225,9 +232,15 @@ videoSourceSelect.addEventListener('change', (e) => {
   }
 });
 
-// On page load, fetch sources and populate the microphone list.
 getSources();
 populateMicrophones();
 
-// Bind the start/stop recording button.
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
 startStopBtn.addEventListener('click', toggleRecording);

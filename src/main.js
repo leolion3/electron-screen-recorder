@@ -9,28 +9,26 @@ function createWindow() {
     win = new BrowserWindow({
         width: 400,
         height: 800,
-        frame: false,  // Disable the default window frame for custom design
-        transparent: true,  // For the transparent background
+        frame: false,
+        transparent: true,
         resizable: false,
         webPreferences: {
-            nodeIntegration: true,  // Allow nodeIntegration for renderer
-            contextIsolation: false, // Allow renderer to access Electron's node modules
+            nodeIntegration: true,
+            contextIsolation: false,
         }
     });
 
-    win.loadFile('index.html');  // Load the HTML page
+    win.loadFile('index.html');
     win.on('closed', () => {
         win = null;
     });
 }
 
-// Handle IPC request to get screen and window sources
 ipcMain.handle('get-sources', async () => {
     const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
-    return sources;  // Return the available sources (screens, windows)
+    return sources;
 });
 
-// Handle the save dialog and write the file
 ipcMain.handle('save-dialog', async (event, buffer) => {
     const { filePath } = await dialog.showSaveDialog(win, {
         buttonLabel: 'Save video',
@@ -41,7 +39,6 @@ ipcMain.handle('save-dialog', async (event, buffer) => {
     });
 
     if (filePath) {
-        // Write the buffer to the file path
         fs.writeFile(filePath, buffer, (err) => {
             if (err) {
                 console.error('Error saving video:', err);
@@ -51,17 +48,15 @@ ipcMain.handle('save-dialog', async (event, buffer) => {
         });
     }
 
-    return { filePath };  // Return the file path to renderer
+    return { filePath };
 });
 
-// Quit the app when all windows are closed
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
     }
 });
 
-// Initialize the app
 app.whenReady().then(() => {
     createWindow();
 
